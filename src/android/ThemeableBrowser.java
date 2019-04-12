@@ -61,6 +61,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.graphics.Color;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
@@ -69,6 +70,7 @@ import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginManager;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.Whitelist;
+import org.apache.cordova.LOG;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -95,7 +97,7 @@ public class ThemeableBrowser extends CordovaPlugin {
     private static final String ALIGN_RIGHT = "right";
 
     private static final int TOOLBAR_DEF_HEIGHT = 44;
-    private static final int DISABLED_ALPHA = 127;  // 50% AKA 127/255.
+    private static final int DISABLED_ALPHA = 127; // 50% AKA 127/255.
 
     private static final String EVT_ERR = "ThemeableBrowserError";
     private static final String EVT_WRN = "ThemeableBrowserWarning";
@@ -113,12 +115,15 @@ public class ThemeableBrowser extends CordovaPlugin {
      * Executes the request and returns PluginResult.
      *
      * @param action          The action to execute.
-     * @param args            The exec() arguments, wrapped with some Cordova helpers.
-     * @param callbackContext The callback context used when calling back into JavaScript.
+     * @param args            The exec() arguments, wrapped with some Cordova
+     *                        helpers.
+     * @param callbackContext The callback context used when calling back into
+     *                        JavaScript.
      * @return
      * @throws JSONException
      */
-    public boolean execute(String action, CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, CordovaArgs args, final CallbackContext callbackContext)
+            throws JSONException {
         if (action.equals("open")) {
             this.callbackContext = callbackContext;
             final String url = args.getString(0);
@@ -135,7 +140,8 @@ public class ThemeableBrowser extends CordovaPlugin {
                     String result = "";
                     // SELF
                     if (SELF.equals(target)) {
-                        /* This code exists for compatibility between 3.x and 4.x versions of Cordova.
+                        /*
+                         * This code exists for compatibility between 3.x and 4.x versions of Cordova.
                          * Previously the Config class had a static method, isUrlWhitelisted(). That
                          * responsibility has been moved to the plugins, with an aggregating method in
                          * PluginManager.
@@ -150,9 +156,9 @@ public class ThemeableBrowser extends CordovaPlugin {
                         if (shouldAllowNavigation == null) {
                             try {
                                 Method gpm = webView.getClass().getMethod("getPluginManager");
-                                PluginManager pm = (PluginManager)gpm.invoke(webView);
+                                PluginManager pm = (PluginManager) gpm.invoke(webView);
                                 Method san = pm.getClass().getMethod("shouldAllowNavigation", String.class);
-                                shouldAllowNavigation = (Boolean)san.invoke(pm, url);
+                                shouldAllowNavigation = (Boolean) san.invoke(pm, url);
                             } catch (NoSuchMethodException e) {
                             } catch (IllegalAccessException e) {
                             } catch (InvocationTargetException e) {
@@ -162,16 +168,14 @@ public class ThemeableBrowser extends CordovaPlugin {
                         if (Boolean.TRUE.equals(shouldAllowNavigation)) {
                             webView.loadUrl(url);
                         }
-                        //Load the dialer
-                        else if (url.startsWith(WebView.SCHEME_TEL))
-                        {
+                        // Load the dialer
+                        else if (url.startsWith(WebView.SCHEME_TEL)) {
                             try {
                                 Intent intent = new Intent(Intent.ACTION_DIAL);
                                 intent.setData(Uri.parse(url));
                                 cordova.getActivity().startActivity(intent);
                             } catch (android.content.ActivityNotFoundException e) {
-                                emitError(ERR_CRITICAL,
-                                        String.format("Error dialing %s: %s", url, e.toString()));
+                                emitError(ERR_CRITICAL, String.format("Error dialing %s: %s", url, e.toString()));
                             }
                         }
                         // load in ThemeableBrowser
@@ -193,45 +197,46 @@ public class ThemeableBrowser extends CordovaPlugin {
                     callbackContext.sendPluginResult(pluginResult);
                 }
             });
-        }
-        else if (action.equals("close")) {
+        } else if (action.equals("close")) {
             closeDialog();
-        }
-        else if (action.equals("injectScriptCode")) {
+        } else if (action.equals("injectScriptCode")) {
             String jsWrapper = null;
             if (args.getBoolean(1)) {
-                jsWrapper = String.format("prompt(JSON.stringify([eval(%%s)]), 'gap-iab://%s')", callbackContext.getCallbackId());
+                jsWrapper = String.format("prompt(JSON.stringify([eval(%%s)]), 'gap-iab://%s')",
+                        callbackContext.getCallbackId());
             }
             injectDeferredObject(args.getString(0), jsWrapper);
-        }
-        else if (action.equals("injectScriptFile")) {
+        } else if (action.equals("injectScriptFile")) {
             String jsWrapper;
             if (args.getBoolean(1)) {
-                jsWrapper = String.format("(function(d) { var c = d.createElement('script'); c.src = %%s; c.onload = function() { prompt('', 'gap-iab://%s'); }; d.body.appendChild(c); })(document)", callbackContext.getCallbackId());
+                jsWrapper = String.format(
+                        "(function(d) { var c = d.createElement('script'); c.src = %%s; c.onload = function() { prompt('', 'gap-iab://%s'); }; d.body.appendChild(c); })(document)",
+                        callbackContext.getCallbackId());
             } else {
                 jsWrapper = "(function(d) { var c = d.createElement('script'); c.src = %s; d.body.appendChild(c); })(document)";
             }
             injectDeferredObject(args.getString(0), jsWrapper);
-        }
-        else if (action.equals("injectStyleCode")) {
+        } else if (action.equals("injectStyleCode")) {
             String jsWrapper;
             if (args.getBoolean(1)) {
-                jsWrapper = String.format("(function(d) { var c = d.createElement('style'); c.innerHTML = %%s; d.body.appendChild(c); prompt('', 'gap-iab://%s');})(document)", callbackContext.getCallbackId());
+                jsWrapper = String.format(
+                        "(function(d) { var c = d.createElement('style'); c.innerHTML = %%s; d.body.appendChild(c); prompt('', 'gap-iab://%s');})(document)",
+                        callbackContext.getCallbackId());
             } else {
                 jsWrapper = "(function(d) { var c = d.createElement('style'); c.innerHTML = %s; d.body.appendChild(c); })(document)";
             }
             injectDeferredObject(args.getString(0), jsWrapper);
-        }
-        else if (action.equals("injectStyleFile")) {
+        } else if (action.equals("injectStyleFile")) {
             String jsWrapper;
             if (args.getBoolean(1)) {
-                jsWrapper = String.format("(function(d) { var c = d.createElement('link'); c.rel='stylesheet'; c.type='text/css'; c.href = %%s; d.head.appendChild(c); prompt('', 'gap-iab://%s');})(document)", callbackContext.getCallbackId());
+                jsWrapper = String.format(
+                        "(function(d) { var c = d.createElement('link'); c.rel='stylesheet'; c.type='text/css'; c.href = %%s; d.head.appendChild(c); prompt('', 'gap-iab://%s');})(document)",
+                        callbackContext.getCallbackId());
             } else {
                 jsWrapper = "(function(d) { var c = d.createElement('link'); c.rel='stylesheet'; c.type='text/css'; c.href = %s; d.head.appendChild(c); })(document)";
             }
             injectDeferredObject(args.getString(0), jsWrapper);
-        }
-        else if (action.equals("show")) {
+        } else if (action.equals("show")) {
             this.cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -241,8 +246,7 @@ public class ThemeableBrowser extends CordovaPlugin {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
             pluginResult.setKeepCallback(true);
             this.callbackContext.sendPluginResult(pluginResult);
-        }
-        else if (action.equals("reload")) {
+        } else if (action.equals("reload")) {
             if (inAppWebView != null) {
                 this.cordova.getActivity().runOnUiThread(new Runnable() {
                     @Override
@@ -251,8 +255,7 @@ public class ThemeableBrowser extends CordovaPlugin {
                     }
                 });
             }
-        }
-        else {
+        } else {
             return false;
         }
         return true;
@@ -267,8 +270,7 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     /**
-     * Called by AccelBroker when listener is to be shut down.
-     * Stop listener.
+     * Called by AccelBroker when listener is to be shut down. Stop listener.
      */
     public void onDestroy() {
         closeDialog();
@@ -277,18 +279,19 @@ public class ThemeableBrowser extends CordovaPlugin {
     /**
      * Inject an object (script or style) into the ThemeableBrowser WebView.
      *
-     * This is a helper method for the inject{Script|Style}{Code|File} API calls, which
-     * provides a consistent method for injecting JavaScript code into the document.
+     * This is a helper method for the inject{Script|Style}{Code|File} API calls,
+     * which provides a consistent method for injecting JavaScript code into the
+     * document.
      *
-     * If a wrapper string is supplied, then the source string will be JSON-encoded (adding
-     * quotes) and wrapped using string formatting. (The wrapper string should have a single
-     * '%s' marker)
+     * If a wrapper string is supplied, then the source string will be JSON-encoded
+     * (adding quotes) and wrapped using string formatting. (The wrapper string
+     * should have a single '%s' marker)
      *
-     * @param source      The source object (filename or script/style text) to inject into
-     *                    the document.
-     * @param jsWrapper   A JavaScript string to wrap the source string in, so that the object
-     *                    is properly injected, or null if the source string is JavaScript text
-     *                    which should be executed directly.
+     * @param source    The source object (filename or script/style text) to inject
+     *                  into the document.
+     * @param jsWrapper A JavaScript string to wrap the source string in, so that
+     *                  the object is properly injected, or null if the source
+     *                  string is JavaScript text which should be executed directly.
      */
     private void injectDeferredObject(String source, String jsWrapper) {
         String scriptToInject;
@@ -296,7 +299,7 @@ public class ThemeableBrowser extends CordovaPlugin {
             org.json.JSONArray jsonEsc = new org.json.JSONArray();
             jsonEsc.put(source);
             String jsonRepr = jsonEsc.toString();
-            String jsonSourceString = jsonRepr.substring(1, jsonRepr.length()-1);
+            String jsonSourceString = jsonRepr.substring(1, jsonRepr.length() - 1);
             scriptToInject = String.format(jsWrapper, jsonSourceString);
         } else {
             scriptToInject = source;
@@ -329,16 +332,12 @@ public class ThemeableBrowser extends CordovaPlugin {
         Options result = null;
         if (optString != null && !optString.isEmpty()) {
             try {
-                result = ThemeableBrowserUnmarshaller.JSONToObj(
-                        optString, Options.class);
+                result = ThemeableBrowserUnmarshaller.JSONToObj(optString, Options.class);
             } catch (Exception e) {
-                emitError(ERR_CRITICAL,
-                        String.format("Invalid JSON @s", e.toString()));
+                emitError(ERR_CRITICAL, String.format("Invalid JSON @s", e.toString()));
             }
         } else {
-            emitWarning(WRN_UNDEFINED,
-                    "No config was given, defaults will be used, "
-                    + "which is quite boring.");
+            emitWarning(WRN_UNDEFINED, "No config was given, defaults will be used, " + "which is quite boring.");
         }
 
         if (result == null) {
@@ -361,8 +360,10 @@ public class ThemeableBrowser extends CordovaPlugin {
         try {
             Intent intent = null;
             intent = new Intent(Intent.ACTION_VIEW);
-            // Omitting the MIME type for file: URLs causes "No Activity found to handle Intent".
-            // Adding the MIME type to http: URLs causes them to not be handled by the downloader.
+            // Omitting the MIME type for file: URLs causes "No Activity found to handle
+            // Intent".
+            // Adding the MIME type to http: URLs causes them to not be handled by the
+            // downloader.
             Uri uri = Uri.parse(url);
             if ("file".equals(uri.getScheme())) {
                 intent.setDataAndType(uri, webView.getResourceApi().getMimeType(uri));
@@ -373,7 +374,7 @@ public class ThemeableBrowser extends CordovaPlugin {
             this.cordova.getActivity().startActivity(intent);
             return "";
         } catch (android.content.ActivityNotFoundException e) {
-            Log.d(LOG_TAG, "ThemeableBrowser: Error loading url "+url+":"+ e.toString());
+            Log.d(LOG_TAG, "ThemeableBrowser: Error loading url " + url + ":" + e.toString());
             return e.toString();
         }
     }
@@ -441,9 +442,7 @@ public class ThemeableBrowser extends CordovaPlugin {
                 // Ignore, should never happen.
             }
         } else {
-            emitWarning(WRN_UNDEFINED,
-                    "Button clicked, but event property undefined. "
-                    + "No event will be raised.");
+            emitWarning(WRN_UNDEFINED, "Button clicked, but event property undefined. " + "No event will be raised.");
         }
     }
 
@@ -480,6 +479,7 @@ public class ThemeableBrowser extends CordovaPlugin {
 
     /**
      * Can the web browser go back?
+     * 
      * @return boolean
      */
     public boolean canGoBack() {
@@ -487,7 +487,8 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     /**
-     * Checks to see if it is possible to go forward one page in history, then does so.
+     * Checks to see if it is possible to go forward one page in history, then does
+     * so.
      */
     private void goForward() {
         if (this.inAppWebView != null && this.inAppWebView.canGoForward()) {
@@ -501,7 +502,8 @@ public class ThemeableBrowser extends CordovaPlugin {
      * @param url to load
      */
     private void navigate(String url) {
-        InputMethodManager imm = (InputMethodManager)this.cordova.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = (InputMethodManager) this.cordova.getActivity()
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(edittext.getWindowToken(), 0);
 
         if (!url.startsWith("http") && !url.startsWith("file:")) {
@@ -531,12 +533,10 @@ public class ThemeableBrowser extends CordovaPlugin {
             @SuppressLint("NewApi")
             public void run() {
                 // Let's create the main dialog
-                dialog = new ThemeableBrowserDialog(cordova.getActivity(),
-                        android.R.style.Theme_Black_NoTitleBar,
+                dialog = new ThemeableBrowserDialog(cordova.getActivity(), android.R.style.Theme_Black_NoTitleBar,
                         features.hardwareback);
                 if (!features.disableAnimation) {
-                    dialog.getWindow().getAttributes().windowAnimations
-                            = android.R.style.Animation_Dialog;
+                    dialog.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
                 }
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog.setCancelable(true);
@@ -556,47 +556,44 @@ public class ThemeableBrowser extends CordovaPlugin {
                 Toolbar toolbarDef = features.toolbar;
                 FrameLayout toolbar = new FrameLayout(cordova.getActivity());
                 toolbar.setBackgroundColor(hexStringToColor(
-                        toolbarDef != null && toolbarDef.color != null
-                                ? toolbarDef.color : "#ffffffff"));
-                toolbar.setLayoutParams(new ViewGroup.LayoutParams(
-                        LayoutParams.MATCH_PARENT,
-                        dpToPixels(toolbarDef != null
-                                ? toolbarDef.height : TOOLBAR_DEF_HEIGHT)));
+                        toolbarDef != null && toolbarDef.color != null ? toolbarDef.color : "#ffffffff"));
+                toolbar.setLayoutParams(new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
+                        dpToPixels(toolbarDef != null ? toolbarDef.height : TOOLBAR_DEF_HEIGHT)));
 
-                if (toolbarDef != null
-                        && (toolbarDef.image != null || toolbarDef.wwwImage != null)) {
+                if (toolbarDef != null && (toolbarDef.image != null || toolbarDef.wwwImage != null)) {
                     try {
-                        Drawable background = getImage(toolbarDef.image
-                                , toolbarDef.wwwImage, toolbarDef.wwwImageDensity);
+                        Drawable background = getImage(toolbarDef.image, toolbarDef.wwwImage,
+                                toolbarDef.wwwImageDensity);
                         setBackground(toolbar, background);
                     } catch (Resources.NotFoundException e) {
                         emitError(ERR_LOADFAIL,
-                                String.format("Image for toolbar, %s, failed to load",
-                                        toolbarDef.image));
+                                String.format("Image for toolbar, %s, failed to load", toolbarDef.image));
                     } catch (IOException ioe) {
                         emitError(ERR_LOADFAIL,
-                                String.format("Image for toolbar, %s, failed to load",
-                                        toolbarDef.wwwImage));
+                                String.format("Image for toolbar, %s, failed to load", toolbarDef.wwwImage));
                     }
                 }
 
                 // Left Button Container layout
                 LinearLayout leftButtonContainer = new LinearLayout(cordova.getActivity());
-                FrameLayout.LayoutParams leftButtonContainerParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                FrameLayout.LayoutParams leftButtonContainerParams = new FrameLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
                 leftButtonContainerParams.gravity = Gravity.LEFT | Gravity.CENTER_VERTICAL;
                 leftButtonContainer.setLayoutParams(leftButtonContainerParams);
                 leftButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
 
                 // Right Button Container layout
                 LinearLayout rightButtonContainer = new LinearLayout(cordova.getActivity());
-                FrameLayout.LayoutParams rightButtonContainerParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                FrameLayout.LayoutParams rightButtonContainerParams = new FrameLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
                 rightButtonContainerParams.gravity = Gravity.RIGHT | Gravity.CENTER_VERTICAL;
                 rightButtonContainer.setLayoutParams(rightButtonContainerParams);
                 rightButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
 
                 // Edit Text Box
                 edittext = new EditText(cordova.getActivity());
-                RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+                RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(
+                        LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
                 textLayoutParams.addRule(RelativeLayout.RIGHT_OF, 1);
                 textLayoutParams.addRule(RelativeLayout.LEFT_OF, 5);
                 edittext.setLayoutParams(textLayoutParams);
@@ -617,68 +614,49 @@ public class ThemeableBrowser extends CordovaPlugin {
                 });
 
                 // Back button
-                final Button back = createButton(
-                    features.backButton,
-                    "back button",
-                    new View.OnClickListener() {
-                        public void onClick(View v) {
-                            emitButtonEvent(
-                                    features.backButton,
-                                    inAppWebView.getUrl());
+                final Button back = createButton(features.backButton, "back button", new View.OnClickListener() {
+                    public void onClick(View v) {
+                        emitButtonEvent(features.backButton, inAppWebView.getUrl());
 
-                            if (features.backButtonCanClose && !canGoBack()) {
-                                closeDialog();
-                            } else {
-                                goBack();
-                            }
+                        if (features.backButtonCanClose && !canGoBack()) {
+                            closeDialog();
+                        } else {
+                            goBack();
                         }
                     }
-                );
+                });
 
                 if (back != null) {
                     back.setEnabled(features.backButtonCanClose);
                 }
 
                 // Forward button
-                final Button forward = createButton(
-                    features.forwardButton,
-                    "forward button",
-                    new View.OnClickListener() {
-                        public void onClick(View v) {
-                            emitButtonEvent(
-                                    features.forwardButton,
-                                    inAppWebView.getUrl());
+                final Button forward = createButton(features.forwardButton, "forward button",
+                        new View.OnClickListener() {
+                            public void onClick(View v) {
+                                emitButtonEvent(features.forwardButton, inAppWebView.getUrl());
 
-                            goForward();
-                        }
-                    }
-                );
+                                goForward();
+                            }
+                        });
 
                 if (back != null) {
                     back.setEnabled(false);
                 }
 
-
                 // Close/Done button
-                Button close = createButton(
-                    features.closeButton,
-                    "close button",
-                    new View.OnClickListener() {
-                        public void onClick(View v) {
-                            emitButtonEvent(
-                                    features.closeButton,
-                                    inAppWebView.getUrl());
-                            closeDialog();
-                        }
+                Button close = createButton(features.closeButton, "close button", new View.OnClickListener() {
+                    public void onClick(View v) {
+                        emitButtonEvent(features.closeButton, inAppWebView.getUrl());
+                        closeDialog();
                     }
-                );
+                });
 
                 // Menu button
-                Spinner menu = features.menu != null
-                        ? new MenuSpinner(cordova.getActivity()) : null;
+                Spinner menu = features.menu != null ? new MenuSpinner(cordova.getActivity()) : null;
                 if (menu != null) {
-                    menu.setLayoutParams(new LinearLayout.LayoutParams(
-                            LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+                    menu.setLayoutParams(
+                            new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
                     menu.setContentDescription("menu button");
                     setButtonImages(menu, features.menu, DISABLED_ALPHA);
 
@@ -688,61 +666,44 @@ public class ThemeableBrowser extends CordovaPlugin {
                         @Override
                         public boolean onTouch(View v, MotionEvent event) {
                             if (event.getAction() == MotionEvent.ACTION_UP) {
-                                emitButtonEvent(
-                                        features.menu,
-                                        inAppWebView.getUrl());
+                                emitButtonEvent(features.menu, inAppWebView.getUrl());
                             }
                             return false;
                         }
                     });
 
                     if (features.menu.items != null) {
-                        HideSelectedAdapter<EventLabel> adapter
-                                = new HideSelectedAdapter<EventLabel>(
-                                cordova.getActivity(),
-                                android.R.layout.simple_spinner_item,
-                                features.menu.items);
-                        adapter.setDropDownViewResource(
-                                android.R.layout.simple_spinner_dropdown_item);
+                        HideSelectedAdapter<EventLabel> adapter = new HideSelectedAdapter<EventLabel>(
+                                cordova.getActivity(), android.R.layout.simple_spinner_item, features.menu.items);
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                         menu.setAdapter(adapter);
-                        menu.setOnItemSelectedListener(
-                                new AdapterView.OnItemSelectedListener() {
-                                    @Override
-                                    public void onItemSelected(
-                                            AdapterView<?> adapterView,
-                                            View view, int i, long l) {
-                                        if (inAppWebView != null
-                                                && i < features.menu.items.length) {
-                                            emitButtonEvent(
-                                                    features.menu.items[i],
-                                                    inAppWebView.getUrl(), i);
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onNothingSelected(
-                                            AdapterView<?> adapterView) {
-                                    }
+                        menu.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                            @Override
+                            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                                if (inAppWebView != null && i < features.menu.items.length) {
+                                    emitButtonEvent(features.menu.items[i], inAppWebView.getUrl(), i);
                                 }
-                        );
+                            }
+
+                            @Override
+                            public void onNothingSelected(AdapterView<?> adapterView) {
+                            }
+                        });
                     }
                 }
 
                 // Title
-                final TextView title = features.title != null
-                        ? new TextView(cordova.getActivity()) : null;
+                final TextView title = features.title != null ? new TextView(cordova.getActivity()) : null;
                 if (title != null) {
-                    FrameLayout.LayoutParams titleParams
-                            = new FrameLayout.LayoutParams(
-                            LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                    FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.WRAP_CONTENT);
                     titleParams.gravity = Gravity.CENTER;
                     title.setLayoutParams(titleParams);
                     title.setSingleLine();
                     title.setEllipsize(TextUtils.TruncateAt.END);
                     title.setGravity(Gravity.CENTER);
-                    title.setTextColor(hexStringToColor(
-                            features.title.color != null
-                                    ? features.title.color : "#000000ff"));
+                    title.setTextColor(
+                            hexStringToColor(features.title.color != null ? features.title.color : "#000000ff"));
                     if (features.title.staticText != null) {
                         title.setText(features.title.staticText);
                     }
@@ -761,10 +722,8 @@ public class ThemeableBrowser extends CordovaPlugin {
                 WebViewClient client = new ThemeableBrowserClient(thatWebView, new PageLoadListener() {
                     @Override
                     public void onPageFinished(String url, boolean canGoBack, boolean canGoForward) {
-                        if (inAppWebView != null
-                                && title != null && features.title != null
-                                && features.title.staticText == null
-                                && features.title.showPageTitle) {
+                        if (inAppWebView != null && title != null && features.title != null
+                                && features.title.staticText == null && features.title.showPageTitle) {
                             title.setText(inAppWebView.getTitle());
                         }
 
@@ -785,11 +744,13 @@ public class ThemeableBrowser extends CordovaPlugin {
                 settings.setDisplayZoomControls(false);
                 settings.setPluginState(android.webkit.WebSettings.PluginState.ON);
 
-                //Toggle whether this is enabled or not!
+                // Toggle whether this is enabled or not!
                 Bundle appSettings = cordova.getActivity().getIntent().getExtras();
-                boolean enableDatabase = appSettings == null || appSettings.getBoolean("ThemeableBrowserStorageEnabled", true);
+                boolean enableDatabase = appSettings == null
+                        || appSettings.getBoolean("ThemeableBrowserStorageEnabled", true);
                 if (enableDatabase) {
-                    String databasePath = cordova.getActivity().getApplicationContext().getDir("themeableBrowserDB", Context.MODE_PRIVATE).getPath();
+                    String databasePath = cordova.getActivity().getApplicationContext()
+                            .getDir("themeableBrowserDB", Context.MODE_PRIVATE).getPath();
                     settings.setDatabasePath(databasePath);
                     settings.setDatabaseEnabled(true);
                 }
@@ -817,28 +778,22 @@ public class ThemeableBrowser extends CordovaPlugin {
                     for (int i = 0; i < features.customButtons.length; i++) {
                         final BrowserButton buttonProps = features.customButtons[i];
                         final int index = i;
-                        Button button = createButton(
-                            buttonProps,
-                            String.format("custom button at %d", i),
-                            new View.OnClickListener() {
-                                @Override
-                                public void onClick(View view) {
-                                    if (inAppWebView != null) {
-                                        emitButtonEvent(buttonProps,
-                                                inAppWebView.getUrl(), index);
+                        Button button = createButton(buttonProps, String.format("custom button at %d", i),
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        if (inAppWebView != null) {
+                                            emitButtonEvent(buttonProps, inAppWebView.getUrl(), index);
+                                        }
                                     }
-                                }
-                            }
-                        );
+                                });
 
                         if (ALIGN_RIGHT.equals(buttonProps.align)) {
                             rightButtonContainer.addView(button);
-                            rightContainerWidth
-                                    += button.getLayoutParams().width;
+                            rightContainerWidth += button.getLayoutParams().width;
                         } else {
                             leftButtonContainer.addView(button, 0);
-                            leftContainerWidth
-                                    += button.getLayoutParams().width;
+                            leftContainerWidth += button.getLayoutParams().width;
                         }
                     }
                 }
@@ -849,54 +804,42 @@ public class ThemeableBrowser extends CordovaPlugin {
                 if (forward != null && features.forwardButton != null
                         && !ALIGN_RIGHT.equals(features.forwardButton.align)) {
                     leftButtonContainer.addView(forward, 0);
-                    leftContainerWidth
-                            += forward.getLayoutParams().width;
+                    leftContainerWidth += forward.getLayoutParams().width;
                 }
 
-                if (back != null && features.backButton != null
-                        && ALIGN_RIGHT.equals(features.backButton.align)) {
+                if (back != null && features.backButton != null && ALIGN_RIGHT.equals(features.backButton.align)) {
                     rightButtonContainer.addView(back);
-                    rightContainerWidth
-                            += back.getLayoutParams().width;
+                    rightContainerWidth += back.getLayoutParams().width;
                 }
 
-                if (back != null && features.backButton != null
-                        && !ALIGN_RIGHT.equals(features.backButton.align)) {
+                if (back != null && features.backButton != null && !ALIGN_RIGHT.equals(features.backButton.align)) {
                     leftButtonContainer.addView(back, 0);
-                    leftContainerWidth
-                            += back.getLayoutParams().width;
+                    leftContainerWidth += back.getLayoutParams().width;
                 }
 
                 if (forward != null && features.forwardButton != null
                         && ALIGN_RIGHT.equals(features.forwardButton.align)) {
                     rightButtonContainer.addView(forward);
-                    rightContainerWidth
-                            += forward.getLayoutParams().width;
+                    rightContainerWidth += forward.getLayoutParams().width;
                 }
 
                 if (menu != null) {
-                    if (features.menu != null
-                            && ALIGN_RIGHT.equals(features.menu.align)) {
+                    if (features.menu != null && ALIGN_RIGHT.equals(features.menu.align)) {
                         rightButtonContainer.addView(menu);
-                        rightContainerWidth
-                                += menu.getLayoutParams().width;
+                        rightContainerWidth += menu.getLayoutParams().width;
                     } else {
                         leftButtonContainer.addView(menu, 0);
-                        leftContainerWidth
-                                += menu.getLayoutParams().width;
+                        leftContainerWidth += menu.getLayoutParams().width;
                     }
                 }
 
                 if (close != null) {
-                    if (features.closeButton != null
-                            && ALIGN_RIGHT.equals(features.closeButton.align)) {
+                    if (features.closeButton != null && ALIGN_RIGHT.equals(features.closeButton.align)) {
                         rightButtonContainer.addView(close);
-                        rightContainerWidth
-                                += close.getLayoutParams().width;
+                        rightContainerWidth += close.getLayoutParams().width;
                     } else {
                         leftButtonContainer.addView(close, 0);
-                        leftContainerWidth
-                                += close.getLayoutParams().width;
+                        leftContainerWidth += close.getLayoutParams().width;
                     }
                 }
 
@@ -907,11 +850,9 @@ public class ThemeableBrowser extends CordovaPlugin {
                 toolbar.addView(rightButtonContainer);
 
                 if (title != null) {
-                    int titleMargin = Math.max(
-                            leftContainerWidth, rightContainerWidth);
+                    int titleMargin = Math.max(leftContainerWidth, rightContainerWidth);
 
-                    FrameLayout.LayoutParams titleParams
-                            = (FrameLayout.LayoutParams) title.getLayoutParams();
+                    FrameLayout.LayoutParams titleParams = (FrameLayout.LayoutParams) title.getLayoutParams();
                     titleParams.setMargins(titleMargin, 0, titleMargin, 0);
                     toolbar.addView(title);
                 }
@@ -942,9 +883,29 @@ public class ThemeableBrowser extends CordovaPlugin {
                 dialog.getWindow().setAttributes(lp);
                 // the goal of openhidden is to load the url and not display it
                 // Show() needs to be called to cause the URL to be loaded
-                if(features.hidden) {
+                if (features.hidden) {
                     dialog.hide();
                 }
+
+                // Set status bar color
+                final Window window = dialog.getWindow();
+                // Method and constants not available on all SDKs but we want to be able to
+                // compile this code with any SDK
+                window.clearFlags(0x04000000); // SDK 19: WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+                window.addFlags(0x80000000); // SDK 21: WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                try {
+                    // Using reflection makes sure any 5.0+ device will work without having to
+                    // compile with SDK level 21
+                    window.getClass().getMethod("setStatusBarColor", int.class).invoke(window,
+                            Color.parseColor(features.toolbar.color));
+                } catch (IllegalArgumentException ignore) {
+                    LOG.e(LOG_TAG, "Invalid hexString argument, use f.i. '#999999'");
+                } catch (Exception ignore) {
+                    // this should not happen, only in case Android removes this method in a version
+                    // > 21
+                    LOG.w(LOG_TAG, "Method window.setStatusBarColor not found for SDK level " + Build.VERSION.SDK_INT);
+                }
+
             }
         };
         this.cordova.getActivity().runOnUiThread(runnable);
@@ -957,11 +918,8 @@ public class ThemeableBrowser extends CordovaPlugin {
      * @return int
      */
     private int dpToPixels(int dipValue) {
-        int value = (int) TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                (float) dipValue,
-                cordova.getActivity().getResources().getDisplayMetrics()
-        );
+        int value = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) dipValue,
+                cordova.getActivity().getResources().getDisplayMetrics());
 
         return value;
     }
@@ -991,23 +949,23 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     /**
-    * This is a rather unintuitive helper method to load images. The reason why this method exists
-    * is because due to some service limitations, one may not be able to add images to native
-    * resource bundle. So this method offers a way to load image from www contents instead.
-    * However loading from native resource bundle is already preferred over loading from www. So
-    * if name is given, then it simply loads from resource bundle and the other two parameters are
-    * ignored. If name is not given, then altPath is assumed to be a file path _under_ www and
-    * altDensity is the desired density of the given image file, because without native resource
-    * bundle, we can't tell what density the image is supposed to be so it needs to be given
-    * explicitly.
-    */
+     * This is a rather unintuitive helper method to load images. The reason why
+     * this method exists is because due to some service limitations, one may not be
+     * able to add images to native resource bundle. So this method offers a way to
+     * load image from www contents instead. However loading from native resource
+     * bundle is already preferred over loading from www. So if name is given, then
+     * it simply loads from resource bundle and the other two parameters are
+     * ignored. If name is not given, then altPath is assumed to be a file path
+     * _under_ www and altDensity is the desired density of the given image file,
+     * because without native resource bundle, we can't tell what density the image
+     * is supposed to be so it needs to be given explicitly.
+     */
     private Drawable getImage(String name, String altPath, double altDensity) throws IOException {
         Drawable result = null;
         Resources activityRes = cordova.getActivity().getResources();
 
         if (name != null) {
-            int id = activityRes.getIdentifier(name, "drawable",
-                    cordova.getActivity().getPackageName());
+            int id = activityRes.getIdentifier(name, "drawable", cordova.getActivity().getPackageName());
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 result = activityRes.getDrawable(id);
             } else {
@@ -1025,7 +983,8 @@ public class ThemeableBrowser extends CordovaPlugin {
                 // Make sure we close this input stream to prevent resource leak.
                 try {
                     is.close();
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
             }
         }
         return result;
@@ -1040,24 +999,20 @@ public class ThemeableBrowser extends CordovaPlugin {
 
         if (buttonProps.image != null || buttonProps.wwwImage != null) {
             try {
-                normalDrawable = getImage(buttonProps.image, buttonProps.wwwImage,
-                        buttonProps.wwwImageDensity);
+                normalDrawable = getImage(buttonProps.image, buttonProps.wwwImage, buttonProps.wwwImageDensity);
                 ViewGroup.LayoutParams params = view.getLayoutParams();
                 params.width = normalDrawable.getIntrinsicWidth();
                 params.height = normalDrawable.getIntrinsicHeight();
             } catch (Resources.NotFoundException e) {
                 emitError(ERR_LOADFAIL,
-                        String.format("Image for %s, %s, failed to load",
-                                description, buttonProps.image));
+                        String.format("Image for %s, %s, failed to load", description, buttonProps.image));
             } catch (IOException ioe) {
                 emitError(ERR_LOADFAIL,
-                        String.format("Image for %s, %s, failed to load",
-                                description, buttonProps.wwwImage));
+                        String.format("Image for %s, %s, failed to load", description, buttonProps.wwwImage));
             }
         } else {
             emitWarning(WRN_UNDEFINED,
-                    String.format("Image for %s is not defined. Button will not be shown",
-                            description));
+                    String.format("Image for %s is not defined. Button will not be shown", description));
         }
 
         if (buttonProps.imagePressed != null || buttonProps.wwwImagePressed != null) {
@@ -1065,18 +1020,14 @@ public class ThemeableBrowser extends CordovaPlugin {
                 pressedDrawable = getImage(buttonProps.imagePressed, buttonProps.wwwImagePressed,
                         buttonProps.wwwImageDensity);
             } catch (Resources.NotFoundException e) {
-                emitError(ERR_LOADFAIL,
-                        String.format("Pressed image for %s, %s, failed to load",
-                                description, buttonProps.imagePressed));
+                emitError(ERR_LOADFAIL, String.format("Pressed image for %s, %s, failed to load", description,
+                        buttonProps.imagePressed));
             } catch (IOException e) {
-                emitError(ERR_LOADFAIL,
-                        String.format("Pressed image for %s, %s, failed to load",
-                                description, buttonProps.wwwImagePressed));
+                emitError(ERR_LOADFAIL, String.format("Pressed image for %s, %s, failed to load", description,
+                        buttonProps.wwwImagePressed));
             }
         } else {
-            emitWarning(WRN_UNDEFINED,
-                    String.format("Pressed image for %s is not defined.",
-                            description));
+            emitWarning(WRN_UNDEFINED, String.format("Pressed image for %s is not defined.", description));
         }
 
         if (normalDrawable != null) {
@@ -1085,8 +1036,7 @@ public class ThemeableBrowser extends CordovaPlugin {
             // so we gotta bring out some bitmap magic. Credit goes to:
             // http://stackoverflow.com/a/7477572
             Bitmap enabledBitmap = ((BitmapDrawable) normalDrawable).getBitmap();
-            Bitmap disabledBitmap = Bitmap.createBitmap(
-                    normalDrawable.getIntrinsicWidth(),
+            Bitmap disabledBitmap = Bitmap.createBitmap(normalDrawable.getIntrinsicWidth(),
                     normalDrawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(disabledBitmap);
 
@@ -1100,26 +1050,13 @@ public class ThemeableBrowser extends CordovaPlugin {
 
         StateListDrawable states = new StateListDrawable();
         if (pressedDrawable != null) {
-            states.addState(
-                new int[] {
-                    android.R.attr.state_pressed
-                },
-                pressedDrawable
-            );
+            states.addState(new int[] { android.R.attr.state_pressed }, pressedDrawable);
         }
         if (normalDrawable != null) {
-            states.addState(
-                new int[] {
-                    android.R.attr.state_enabled
-                },
-                normalDrawable
-            );
+            states.addState(new int[] { android.R.attr.state_enabled }, normalDrawable);
         }
         if (disabledDrawable != null) {
-            states.addState(
-                new int[] {},
-                disabledDrawable
-            );
+            states.addState(new int[] {}, disabledDrawable);
         }
 
         setBackground(view, states);
@@ -1133,22 +1070,18 @@ public class ThemeableBrowser extends CordovaPlugin {
         }
     }
 
-    private Button createButton(BrowserButton buttonProps, String description,
-            View.OnClickListener listener) {
+    private Button createButton(BrowserButton buttonProps, String description, View.OnClickListener listener) {
         Button result = null;
         if (buttonProps != null) {
             result = new Button(cordova.getActivity());
             result.setContentDescription(description);
-            result.setLayoutParams(new LinearLayout.LayoutParams(
-                    LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+            result.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
             setButtonImages(result, buttonProps, DISABLED_ALPHA);
             if (listener != null) {
                 result.setOnClickListener(listener);
             }
         } else {
-            emitWarning(WRN_UNDEFINED,
-                    String.format("%s is not defined. Button will not be shown.",
-                            description));
+            emitWarning(WRN_UNDEFINED, String.format("%s is not defined. Button will not be shown.", description));
         }
         return result;
     }
@@ -1165,7 +1098,7 @@ public class ThemeableBrowser extends CordovaPlugin {
     /**
      * Create a new plugin result and send it back to JavaScript
      *
-     * @param obj a JSONObject contain event payload information
+     * @param obj    a JSONObject contain event payload information
      * @param status the status code to return to the JavaScript environment
      */
     private void sendUpdate(JSONObject obj, boolean keepCallback, PluginResult.Status status) {
@@ -1180,8 +1113,7 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     public static interface PageLoadListener {
-        public void onPageFinished(String url, boolean canGoBack,
-                boolean canGoForward);
+        public void onPageFinished(String url, boolean canGoBack, boolean canGoForward);
     }
 
     /**
@@ -1197,8 +1129,7 @@ public class ThemeableBrowser extends CordovaPlugin {
          * @param webView
          * @param callback
          */
-        public ThemeableBrowserClient(CordovaWebView webView,
-                PageLoadListener callback) {
+        public ThemeableBrowserClient(CordovaWebView webView, PageLoadListener callback) {
             this.webView = webView;
             this.callback = callback;
         }
@@ -1266,12 +1197,13 @@ public class ThemeableBrowser extends CordovaPlugin {
             return false;
         }
 
-
         /*
          * onPageStarted fires the LOAD_START_EVENT
          *
          * @param view
+         * 
          * @param url
+         * 
          * @param favicon
          */
         @Override
@@ -1280,11 +1212,9 @@ public class ThemeableBrowser extends CordovaPlugin {
             String newloc = "";
             if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:")) {
                 newloc = url;
-            }
-            else
-            {
+            } else {
                 // Assume that everything is HTTP at this point, because if we don't specify,
-                // it really should be.  Complain loudly about this!!!
+                // it really should be. Complain loudly about this!!!
                 Log.e(LOG_TAG, "Possible Uncaught/Unknown URI");
                 newloc = "http://" + url;
             }
@@ -1315,8 +1245,7 @@ public class ThemeableBrowser extends CordovaPlugin {
                 sendUpdate(obj, true);
 
                 if (this.callback != null) {
-                    this.callback.onPageFinished(url, view.canGoBack(),
-                            view.canGoForward());
+                    this.callback.onPageFinished(url, view.canGoBack(), view.canGoForward());
                 }
             } catch (JSONException ex) {
             }
@@ -1339,8 +1268,8 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     /**
-     * Like Spinner but will always trigger onItemSelected even if a selected
-     * item is selected, and always ignore default selection.
+     * Like Spinner but will always trigger onItemSelected even if a selected item
+     * is selected, and always ignore default selection.
      */
     public class MenuSpinner extends Spinner {
         private OnItemSelectedListener listener;
@@ -1365,8 +1294,9 @@ public class ThemeableBrowser extends CordovaPlugin {
     }
 
     /**
-     * Extension of ArrayAdapter. The only difference is that it hides the
-     * selected text that's shown inside spinner.
+     * Extension of ArrayAdapter. The only difference is that it hides the selected
+     * text that's shown inside spinner.
+     * 
      * @param <T>
      */
     private static class HideSelectedAdapter<T> extends ArrayAdapter {
@@ -1375,13 +1305,12 @@ public class ThemeableBrowser extends CordovaPlugin {
             super(context, resource, objects);
         }
 
-        public View getView (int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, ViewGroup parent) {
             View v = super.getView(position, convertView, parent);
             v.setVisibility(View.GONE);
             return v;
         }
     }
-
 
     /**
      * A class to hold parsed option properties.
