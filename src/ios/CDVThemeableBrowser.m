@@ -338,6 +338,7 @@
             [self.viewController presentViewController:nav animated:animated completion:nil];
         }
     });
+    nav.modalPresentationStyle = UIModalPresentationFullScreen;
 }
 
 - (void)openInCordovaWebView:(NSURL*)url withOptions:(NSString*)options
